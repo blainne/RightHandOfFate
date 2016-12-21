@@ -26,6 +26,22 @@ type private PersistChosenPersonCommand =
         WHERE 
             Name = @personName", ConnectionStringOrName = "name=TestConnection", AllParametersOptional = true>
 
+type private LotteryDb =
+    SqlProgrammabilityProvider<ConnectionStringOrName = "name=TestConnection">
+
+let addPeople (people:Person seq) = 
+    let peopleTable = new LotteryDb.dbo.Tables.People() 
+    let makeNewRow (p:Person) =
+        peopleTable.NewRow(Name = p.Value)
+    
+    let addRow r =peopleTable.Rows.Add r
+    
+    people
+    |> Seq.map makeNewRow 
+    |> Seq.iter addRow
+
+    peopleTable.BulkCopy(copyOptions = System.Data.SqlClient.SqlBulkCopyOptions.TableLock)
+
 let private toPersonAssignment 
         (allRecords:Map<int,AllAssignmentsQuery.Record>)
         (dbRecord:AllAssignmentsQuery.Record)
@@ -106,8 +122,8 @@ let setAssignment asgn =
             do! persistFun gifter.TargetedBy (Some gifted.Id) gifter.Name
             do! persistFun (Some gifter.Id) gifted.TargetPerson gifted.Name
             return! Ok (Assigned (Person (gifted.Name)))
-        | _ -> 
-            return! Bad (Error "Someone selected this person in the meantime.")
+        | None, _ -> return! Bad (AssigneeAlreadyTaken)
+        | _ -> return! Bad (AssignedInMeantime)
     }
     |>
     Either.map (fun r -> 

@@ -7,6 +7,8 @@ open FateTypes
 //startWebServer defaultConfig (OK "Hello World!")
 [<EntryPoint>]
 let main args =
+    Database.addPeople [Person "Grześ"; Person "Anusia"]
+
     let resultG = assignPersonFor (Person "Grześ")
     let resultA = assignPersonFor (Person "Anusia")
 

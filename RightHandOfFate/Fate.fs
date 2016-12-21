@@ -17,7 +17,7 @@ let getPerson prsn repo =
         |> Seq.toList
 
     match person with
-    | p::[] -> Ok(p)
+    | [p] -> Ok(p)
     | _ -> Bad(NotFound prsn)
 
 
@@ -52,13 +52,5 @@ let assignPersonFor prsn =
         return! persistAssignment {gifter = prsn; gifted = asgn.targetPerson.Value}
     }
 
-// [<EntryPoint>]
-// let main args =
-//     let resultG = assignPersonFor (Person "Grześ")
-//     let resultA = assignPersonFor (Person "Anusia")
 
-//     printfn "%A" resultG
-//     printfn "%A" resultA
-
-//     1
 
