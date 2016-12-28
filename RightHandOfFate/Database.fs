@@ -26,21 +26,14 @@ type private PersistChosenPersonCommand =
         WHERE 
             Name = @personName", ConnectionStringOrName = "name=TestConnection", AllParametersOptional = true>
 
+type private RemoveAllCommand = 
+    SqlCommandProvider<"
+        DELETE FROM dbo.People", ConnectionStringOrName = "name=TestConnection">
+
 type private LotteryDb =
     SqlProgrammabilityProvider<ConnectionStringOrName = "name=TestConnection">
 
-let addPeople (people:Person seq) = 
-    let peopleTable = new LotteryDb.dbo.Tables.People() 
-    let makeNewRow (p:Person) =
-        peopleTable.NewRow(Name = p.Value)
-    
-    let addRow r =peopleTable.Rows.Add r
-    
-    people
-    |> Seq.map makeNewRow 
-    |> Seq.iter addRow
 
-    peopleTable.BulkCopy(copyOptions = System.Data.SqlClient.SqlBulkCopyOptions.TableLock)
 
 let private toPersonAssignment 
         (allRecords:Map<int,AllAssignmentsQuery.Record>)
@@ -121,7 +114,7 @@ let setAssignment asgn =
         | None, None -> 
             do! persistFun gifter.TargetedBy (Some gifted.Id) gifter.Name
             do! persistFun (Some gifter.Id) gifted.TargetPerson gifted.Name
-            return! Ok (Assigned (Person (gifted.Name)))
+            return! Ok (Person (gifted.Name))
         | None, _ -> return! Bad (AssigneeAlreadyTaken)
         | _ -> return! Bad (AssignedInMeantime)
     }
@@ -130,3 +123,23 @@ let setAssignment asgn =
                     transaction.Complete()
                     r) 
 
+let addPeople (people:Person seq) = 
+    let peopleTable = new LotteryDb.dbo.Tables.People() 
+    let makeNewRow (p:Person) =
+        peopleTable.NewRow(Name = p.Value)
+    
+    let addRow r =peopleTable.Rows.Add r
+    
+    people
+    |> Seq.map makeNewRow 
+    |> Seq.iter addRow
+
+    let f() = peopleTable.BulkCopy(copyOptions = System.Data.SqlClient.SqlBulkCopyOptions.TableLock)
+    exFunToNiceEither f
+    
+
+let removeAllPeople () =
+    let pCommand = new RemoveAllCommand(connectionString)
+
+    let f () = pCommand.Execute()
+    exFunToNiceEither f

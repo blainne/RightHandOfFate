@@ -52,5 +52,7 @@ let assignPersonFor prsn =
         return! persistAssignment {gifter = prsn; gifted = asgn.targetPerson.Value}
     }
 
+let init = Database.addPeople 
+let clearPeople = Database.removeAllPeople
 
 
