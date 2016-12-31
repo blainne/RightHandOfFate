@@ -1,55 +1,23 @@
-open Suave                 
-open Suave.Successful  
-open Suave.ServerErrors
-open Suave.RequestErrors    
-open Suave.Web             
-open Suave.Filters
-open Suave.Operators
+module RightHandOfFate
+open Either
 open Fate
-open FateTypes
+open Database
 
 
+let init = Database.addPeople 
+let clearPeople = Database.removeAllPeople
+let persistAssignment = Database.setAssignment 
 
-let reasonToErrorCode = 
-        function
-        | AssignedBefore v -> OK ("Already assigned: " + v.Value)
-        | NotFound p ->       NOT_FOUND p.Value
-        | Error s ->          INTERNAL_ERROR s
-        | _ ->                INTERNAL_ERROR ""
+let assignPersonFor prsn = 
+    
+    let rand = new System.Random()
+    
 
-
-let stringify v = 
-    match box v with
-        | null -> ""
-        | _ -> v.ToString()
-
-let eitherToHttp e = 
-    match e with
-    | Either.Ok v ->        OK (stringify v)
-    | Either.Bad reason ->  reasonToErrorCode reason
-
-
-let clear = clearPeople >> eitherToHttp
-
-let pickPerson name = 
-    eitherToHttp (assignPersonFor (Person name))
-
-let dbInit() = 
-    [Person "grzes"; Person "anusia"]
-    |> init
-    |> eitherToHttp
-
-let app = 
-    choose
-        [
-            GET 
-                >=> pathScan "/lottery/%s" pickPerson
-            DELETE 
-                >=> path "/lottery" 
-                >=> warbler(fun _ -> clear())
-            POST 
-                >=> path "/lottery" 
-                >=> warbler(fun _ -> dbInit())
-        ]
-
-startWebServer defaultConfig app
+    either {
+        let! repo = getAssignments()
+        let candidates = getCandidates prsn repo
+        let! personDetails = getPerson prsn repo
+        do! checkIfCanAssignTo personDetails
+        let! asgn = makeAssignment personDetails candidates (rand.Next())
+        return! persistAssignment {gifter = prsn; gifted = asgn.targetPerson.Value}
+    }

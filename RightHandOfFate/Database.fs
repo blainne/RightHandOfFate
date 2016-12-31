@@ -1,8 +1,8 @@
 module Database
 open FSharp.Data
-open FateTypes
 open System.Transactions
 open Either
+open Person
 
 
 let private connectionString =
@@ -40,10 +40,10 @@ let private toPersonAssignment
         (dbRecord:AllAssignmentsQuery.Record)
     =
     let getById id =
-        id|>Option.map (fun id -> Person (allRecords.[id].Name))
+        id|>Option.map (fun id -> Person.create (allRecords.[id].Name))
 
     {
-        person = Person(dbRecord.Name);
+        person = Person.create(dbRecord.Name);
         targetedBy = getById dbRecord.TargetedBy
         targetPerson = getById dbRecord.TargetPerson
     }
@@ -114,7 +114,7 @@ let setAssignment asgn =
         | None, None -> 
             do! persistFun gifter.TargetedBy (Some gifted.Id) gifter.Name
             do! persistFun (Some gifter.Id) gifted.TargetPerson gifted.Name
-            return! Ok (Person (gifted.Name))
+            return! Ok (Person.create (gifted.Name))
         | None, _ -> return! Bad (AssigneeAlreadyTaken)
         | _ -> return! Bad (AssignedInMeantime)
     }

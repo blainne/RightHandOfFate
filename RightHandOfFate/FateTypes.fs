@@ -1,9 +1,6 @@
+[<AutoOpen>]
 module FateTypes
 
-type Person = 
-    | Person of string
-    member this.Value = 
-        let (Person(name)) = this in name 
             
 type PersonAssignment =
     {
