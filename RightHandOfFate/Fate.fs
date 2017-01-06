@@ -30,8 +30,4 @@ let makeAssignment
         rnd =
     let chosenOne = candidates.Item (rnd % (int candidates.Length))
     Ok ({ person with targetPerson = Some chosenOne.person })
-        
     
-
-
-
