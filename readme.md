@@ -20,6 +20,7 @@ The `Database.fs`, obviously, has the db connectivity stuff (using [Fsharp.Data.
 The `Either.fs` is my own very simple, F#-friendly implementation of the either monad with some helper functions and a computation expression builder. 
 Finally, the `FateTypes.fs` and `Person.fs` define the main types and error-types used in the application. 
 
+In the root folder, there's also an additional file `DbSchema.sql` which contains SQL code to create the db table with appropriate fields and some example insert and update statements.
 ###Building
 The project uses FAKE so building it should be pretty straightforward.
 There's just one important thing. You should create a local file in the `RightHandOfFate` project folder called `ConnStrings.config` and place Your connection strings there.
