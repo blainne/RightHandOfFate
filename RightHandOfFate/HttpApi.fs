@@ -1,3 +1,5 @@
+module HttpApi
+
 open Suave                 
 open Suave.Successful  
 open Suave.ServerErrors
@@ -5,9 +7,6 @@ open Suave.RequestErrors
 open Suave.Web             
 open Suave.Filters
 open Suave.Operators
-open Fate
-open FateTypes
-open RightHandOfFate
 
 let reasonToErrorCode = 
         function
@@ -15,7 +14,6 @@ let reasonToErrorCode =
         | NotFound p ->       NOT_FOUND p.Value
         | Error s ->          INTERNAL_ERROR s
         | _ ->                INTERNAL_ERROR ""
-
 
 let stringify v = 
     match box v with
@@ -28,30 +26,15 @@ let eitherToHttp =
     | Either.Ok v ->        OK (stringify v)
     | Either.Bad reason ->  reasonToErrorCode reason
 
-
-let clear = clearPeople >> eitherToHttp
-
-let pickPerson = 
-    Person.create >> assignPersonFor >> eitherToHttp
-    
-
-let dbInit names = 
-    names
-    |> Seq.map Person.create
-    |> init
-    |> eitherToHttp
-
-let app = 
+let app pickFun clearFun initFun = 
     choose
         [
             GET 
-                >=> pathScan "/lottery/%s" pickPerson
+                >=> pathScan "/lottery/%s" pickFun
             DELETE 
                 >=> path "/lottery" 
-                >=> warbler(fun _ -> clear())
+                >=> warbler(fun _ -> clearFun())
             POST 
                 >=> path "/lottery" 
-                >=> warbler(fun _ -> dbInit ["Grzes"; "Anusia"])
+                >=> warbler(fun _ -> initFun ["Grzes"; "Anusia"])
         ]
-
-startWebServer defaultConfig app

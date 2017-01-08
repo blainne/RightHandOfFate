@@ -1,23 +1,20 @@
 module RightHandOfFate
 open Either
 open Fate
-open Database
 
 
-let init = Database.addPeople 
-let clearPeople = Database.removeAllPeople
-let persistAssignment = Database.setAssignment 
-
-let assignPersonFor prsn = 
+let assignPersonWith 
+        getFun 
+        persistFun 
+        person = 
     
     let rand = new System.Random()
-    
 
     either {
-        let! repo = getAssignments()
-        let candidates = getCandidates prsn repo
-        let! personDetails = getPerson prsn repo
+        let! repo = getFun()
+        let candidates = getCandidates person repo
+        let! personDetails = getPerson person repo
         do! checkIfCanAssignTo personDetails
         let! asgn = makeAssignment personDetails candidates (rand.Next())
-        return! persistAssignment {gifter = prsn; gifted = asgn.targetPerson.Value}
+        return! persistFun {gifter = person; gifted = asgn.targetPerson.Value}
     }

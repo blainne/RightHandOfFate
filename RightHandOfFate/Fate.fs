@@ -1,5 +1,8 @@
-module Fate
+module Fate 
 open Either
+//All functions here are intended to be pure
+
+
 
 let getCandidates prsn repo =
     let isGoodCandidate p = (p.person <> prsn) && (p.targetedBy = None)

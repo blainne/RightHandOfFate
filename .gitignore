@@ -393,3 +393,5 @@ paket-files/
 *.sln.iml
 
 ConnStrings.config
+
+!.paket/paket.bootstrapper.exe

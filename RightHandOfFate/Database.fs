@@ -3,16 +3,14 @@ open FSharp.Data
 open System.Transactions
 open Either
 open Person
+open System.Data.SqlClient
 
-
-let private connectionString =
-    System.Configuration.ConfigurationManager.ConnectionStrings.["TestConnection"].ConnectionString
 
 type private AllAssignmentsQuery = 
     SqlCommandProvider<"SELECT * FROM dbo.People", ConnectionStringOrName = "name=TestConnection">
 
-type private GetPersonQuery
-    = SqlCommandProvider<"
+type private GetPersonQuery = 
+    SqlCommandProvider<"
         SELECT * FROM dbo.People 
         WHERE Name = @personName", ConnectionStringOrName = "name=TestConnection", SingleRow = true>
                             
@@ -59,8 +57,8 @@ let private toAssignments recordMap =
     |> Seq.map (snd >> (toPersonAssignment recordMap))
     |> List.ofSeq
 
-let private getAssignmentsUnwrapped () =
-    use getAll = new AllAssignmentsQuery(connectionString)
+let private getAssignmentsUnwrapped (connString:string) =
+    use getAll = new AllAssignmentsQuery(connString)
 
     getAll.AsyncExecute()
     |>Async.RunSynchronously
@@ -72,8 +70,8 @@ let exFunToNiceEither f=
     |> (Either.tryCatch
         >> (Either.bimap id RejectReason.FromExn))
 
-let getAssignments () =
-    exFunToNiceEither getAssignmentsUnwrapped
+let getAssignments (connString:string) =
+    exFunToNiceEither (fun() -> getAssignmentsUnwrapped connString)
     
 
 
@@ -83,8 +81,8 @@ let private getTransaction() =
     transactionOptions.Timeout <- TransactionManager.MaximumTimeout
     new TransactionScope(TransactionScopeOption.Required, transactionOptions)
 
-let private getPerson name =
-    let query = new GetPersonQuery(connectionString)
+let private getPersonFrom (connString:string) name =
+    let query = new GetPersonQuery(connString)
     query.Execute(personName = name) 
     |> fun o -> o.ToEither (Error "Couldn't get user")
 
@@ -101,10 +99,10 @@ let private persistPerson
     exFunToNiceEither f
                     
 
-let setAssignment asgn = 
+let setAssignment (connString:string) asgn = 
     use transaction = getTransaction()
-    let persistFun = persistPerson (new PersistChosenPersonCommand(connectionString))
-    
+    let persistFun = persistPerson (new PersistChosenPersonCommand(connString))
+    let getPerson = getPersonFrom connString
 
     either{
         let! gifter = getPerson asgn.gifter.Value
@@ -123,7 +121,7 @@ let setAssignment asgn =
                     transaction.Complete()
                     r) 
 
-let addPeople (people:Person seq) = 
+let addPeople (connString:string) (people:Person seq) = 
     let peopleTable = new LotteryDb.dbo.Tables.People() 
     let makeNewRow (p:Person) =
         peopleTable.NewRow(Name = p.Value)
@@ -134,12 +132,13 @@ let addPeople (people:Person seq) =
     |> Seq.map makeNewRow 
     |> Seq.iter addRow
 
-    let f() = peopleTable.BulkCopy(copyOptions = System.Data.SqlClient.SqlBulkCopyOptions.TableLock)
+    use bulkCopy = new SqlBulkCopy(connString, SqlBulkCopyOptions.TableLock)
+    let f() = bulkCopy.WriteToServer(peopleTable)
     exFunToNiceEither f
     
 
-let removeAllPeople () =
-    let pCommand = new RemoveAllCommand(connectionString)
+let removeAllPeople (connString:string) =
+    let pCommand = new RemoveAllCommand(connString)
 
     let f () = pCommand.Execute()
     exFunToNiceEither f
