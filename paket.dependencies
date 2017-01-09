@@ -3,4 +3,5 @@ nuget Expecto
 nuget FAKE
 nuget FSharp.Core
 nuget fsharp.data.sqlclient
+nuget newtonsoft.json
 nuget Suave

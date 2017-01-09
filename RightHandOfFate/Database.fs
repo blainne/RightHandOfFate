@@ -32,7 +32,6 @@ type private LotteryDb =
     SqlProgrammabilityProvider<ConnectionStringOrName = "name=TestConnection">
 
 
-
 let private toPersonAssignment 
         (allRecords:Map<int,AllAssignmentsQuery.Record>)
         (dbRecord:AllAssignmentsQuery.Record)
@@ -65,16 +64,9 @@ let private getAssignmentsUnwrapped (connString:string) =
     |>buildMap
     |>toAssignments
 
-let exFunToNiceEither f= 
-    f 
-    |> (Either.tryCatch
-        >> (Either.bimap id RejectReason.FromExn))
-
 let getAssignments (connString:string) =
-    exFunToNiceEither (fun() -> getAssignmentsUnwrapped connString)
+    (fun() -> getAssignmentsUnwrapped connString) |> withExnAsRejectReason
     
-
-
 let private getTransaction() =
     let mutable transactionOptions = new TransactionOptions()
     transactionOptions.IsolationLevel <- IsolationLevel.RepeatableRead
@@ -96,7 +88,7 @@ let private persistPerson
                     targetedById = tById,
                     targetPersonId = target,
                     personName = Some name) |> ignore
-    exFunToNiceEither f
+    f  |> withExnAsRejectReason
                     
 
 let setAssignment (connString:string) asgn = 
@@ -134,11 +126,11 @@ let addPeople (connString:string) (people:Person seq) =
 
     use bulkCopy = new SqlBulkCopy(connString, SqlBulkCopyOptions.TableLock)
     let f() = bulkCopy.WriteToServer(peopleTable)
-    exFunToNiceEither f
+    f |> withExnAsRejectReason
     
 
 let removeAllPeople (connString:string) =
     let pCommand = new RemoveAllCommand(connString)
 
     let f () = pCommand.Execute()
-    exFunToNiceEither f
+    f |> withExnAsRejectReason

@@ -7,6 +7,8 @@ open Suave.RequestErrors
 open Suave.Web             
 open Suave.Filters
 open Suave.Operators
+open Either
+open Newtonsoft.Json
 
 let reasonToErrorCode = 
         function
@@ -26,6 +28,23 @@ let eitherToHttp =
     | Either.Ok v ->        OK (stringify v)
     | Either.Bad reason ->  reasonToErrorCode reason
 
+let fromJson<'a> json =
+  JsonConvert.DeserializeObject(json, typeof<'a>) :?> 'a
+
+let getListOfNamesFromReq (req : HttpRequest) =
+    let getNamesOrExn () = 
+        req.rawForm
+        |> System.Text.Encoding.UTF8.GetString
+        |> fromJson<string seq>
+
+    getNamesOrExn |> withExnAsRejectReason
+  
+let initPeopleFromReq initFun req = 
+    either {
+        let! names = getListOfNamesFromReq req
+        return initFun names
+    }
+
 let app pickFun clearFun initFun = 
     choose
         [
@@ -36,5 +55,5 @@ let app pickFun clearFun initFun =
                 >=> warbler(fun _ -> clearFun())
             POST 
                 >=> path "/lottery" 
-                >=> warbler(fun _ -> initFun ["Grzes"; "Anusia"])
+                >=> request((initPeopleFromReq initFun)>>eitherToHttp)
         ]

@@ -31,6 +31,11 @@ let bimap okFn badFn =
     | Ok x -> Ok (okFn x) 
     | Bad b -> Bad (badFn b)
 
+let exFunToNiceEither exnConverter fn= 
+    fn 
+    |> (tryCatch
+        >> (bimap id exnConverter))
+
 
 type EitherBuilder() =
     member o.Bind(m,f) = bind f m

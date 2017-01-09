@@ -28,3 +28,6 @@ type AssignmentResult =
     | Assigned of Person
     | NotAssigned of RejectReason
 
+[<AutoOpen>]
+module FateTypesHelpers = 
+    let withExnAsRejectReason fn = Either.exFunToNiceEither RejectReason.FromExn fn
